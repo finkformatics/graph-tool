@@ -15,7 +15,10 @@ import static de.lwerner.graphTool.GraphTool.unitSize;
 
 public class Vertex {
 
-    public static final double CIRCLE_RADIUS = 1.5;
+    public static final double CIRCLE_RADIUS = 1d;
+    private static final Color FILL_COLOR = Color.DARKSLATEBLUE;
+    private static final Color STROKE_COLOR = Color.WHITE;
+    private static final Color SELECTED_STROKE_COLOR = Color.LIGHTCORAL;
 
     private static int vertexCount;
 
@@ -33,8 +36,8 @@ public class Vertex {
     // Vertex properties
     private final Set<Edge> edges;
 
-    public Vertex(int unitsX, int unitsY) {
-        this.circle = new Circle(CIRCLE_RADIUS * unitSize, Color.DARKSLATEBLUE);
+    public Vertex(double unitsX, double unitsY) {
+        this.circle = new Circle(CIRCLE_RADIUS * unitSize, FILL_COLOR);
         this.text = new Text("" + ++vertexCount);
         this.ui = new StackPane();
 
@@ -43,14 +46,14 @@ public class Vertex {
         buildUi(unitsX, unitsY);
     }
 
-    private void buildUi(int unitsX, int unitsY) {
+    private void buildUi(double unitsX, double unitsY) {
         ui.setLayoutX(unitsX * unitSize);
         ui.setLayoutY(unitsY * unitSize);
 
-        circle.setStroke(Color.WHITE);
+        circle.setStroke(STROKE_COLOR);
         circle.setStrokeWidth(1);
 
-        text.setFont(Font.font(unitSize));
+        text.setFont(Font.font(0.5 * unitSize));
         text.setFill(Color.WHITE);
 
         circle.setCursor(Cursor.HAND);
@@ -58,8 +61,12 @@ public class Vertex {
 
         text.setOnMousePressed(this::mousePressed);
         text.setOnMouseDragged(this::mouseDragged);
+        text.setOnMouseEntered(this::mouseEntered);
+        text.setOnMouseExited(this::mouseExited);
         circle.setOnMousePressed(this::mousePressed);
         circle.setOnMouseDragged(this::mouseDragged);
+        circle.setOnMouseEntered(this::mouseEntered);
+        circle.setOnMouseExited(this::mouseExited);
 
         ui.getChildren().addAll(circle, text);
     }
@@ -72,13 +79,47 @@ public class Vertex {
         edges.add(edge);
     }
 
-    private void mousePressed(MouseEvent event) {
-        orgSceneX = event.getSceneX();
-        orgSceneY = event.getSceneY();
-        orgLayoutX = ui.getLayoutX();
-        orgLayoutY = ui.getLayoutY();
+    public void setSelected(boolean selected) {
+        if (selected) {
+            circle.setStroke(SELECTED_STROKE_COLOR);
+        } else {
+            circle.setStroke(STROKE_COLOR);
+        }
+    }
 
-        ui.toFront();
+    public void setDashed(boolean dashed) {
+        if (dashed) {
+            circle.getStrokeDashArray().addAll(3d);
+        } else {
+            circle.getStrokeDashArray().clear();
+        }
+    }
+
+    private void mouseEntered(MouseEvent event) {
+        if (GraphTool.getState() == GraphTool.ApplicationState.NEW_VERTEX && GraphTool.getNewVertex() != this) {
+            setSelected(true);
+        }
+    }
+
+    private void mouseExited(MouseEvent event) {
+        if (GraphTool.getState() == GraphTool.ApplicationState.NEW_VERTEX && GraphTool.getNewVertex() != this) {
+            setSelected(false);
+        }
+    }
+
+    private void mousePressed(MouseEvent event) {
+        // TODO: Connect two vertices
+        if (GraphTool.getState() == GraphTool.ApplicationState.IDLE) {
+            orgSceneX = event.getSceneX();
+            orgSceneY = event.getSceneY();
+            orgLayoutX = ui.getLayoutX();
+            orgLayoutY = ui.getLayoutY();
+
+            ui.toFront();
+        } else if (GraphTool.getState() == GraphTool.ApplicationState.NEW_VERTEX && GraphTool.getNewVertex() != this) {
+            GraphTool.connectNewVertex(this);
+            setSelected(false);
+        }
     }
 
     private void mouseDragged(MouseEvent event) {
@@ -98,6 +139,10 @@ public class Vertex {
         ui.relocate(newX, newY);
 
         ui.toFront();
+    }
+
+    public static void decrement() {
+        vertexCount--;
     }
 
 }

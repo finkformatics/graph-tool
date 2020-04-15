@@ -4,6 +4,8 @@ import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseButton;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.stage.Screen;
@@ -14,8 +16,16 @@ public class GraphTool extends Application {
     private static final int UNITS_WIDTH = 50;
     private static final int UNITS_HEIGHT = 30;
 
+    protected static enum ApplicationState {
+        IDLE,
+        NEW_VERTEX
+    }
+
     protected static double unitSize;
 
+    private static ApplicationState state = ApplicationState.IDLE;
+    private static Vertex newVertex;
+    private static Group root;
     private Vertex rootVertex;
 
     public GraphTool() {
@@ -29,7 +39,9 @@ public class GraphTool extends Application {
         }
     }
 
-    private void drawGrid(Group root) {
+    private void drawGrid() {
+        // TODO: Update grid on window resize
+
         // Verticals
         for (int x = 0; x < UNITS_WIDTH; x++) {
             Line line = new Line(x * unitSize, 0, x * unitSize, UNITS_HEIGHT * unitSize);
@@ -49,31 +61,70 @@ public class GraphTool extends Application {
 
     @Override
     public void start(Stage stage) {
-        Group root = new Group();
+        root = new Group();
         Scene scene = new Scene(root, UNITS_WIDTH * unitSize, UNITS_HEIGHT * unitSize, Color.DARKSLATEBLUE);
 
-        drawGrid(root);
+        drawGrid();
 
-        rootVertex = new Vertex(10, 5);
-        Vertex v2 = new Vertex(40, 10);
-        Vertex v3 = new Vertex(25, 20);
+        // Click helper => Better way of doing that?
+        Pane pane = new Pane();
+        pane.setLayoutX(0);
+        pane.setLayoutY(0);
+        pane.setPrefWidth(UNITS_WIDTH * unitSize);
+        pane.setPrefHeight(UNITS_WIDTH * unitSize);
+        pane.setOnMousePressed((t) -> {
+            if (t.getButton() == MouseButton.SECONDARY && state == ApplicationState.IDLE) {
+                // New vertex
+                // TODO: Dashed line while creating new vertex
+                state = ApplicationState.NEW_VERTEX;
+                newVertex = new Vertex(
+                        t.getSceneX() / unitSize - Vertex.CIRCLE_RADIUS,
+                        t.getSceneY() / unitSize - Vertex.CIRCLE_RADIUS
+                );
+                newVertex.setDashed(true);
+                newVertex.setSelected(true);
+                root.getChildren().add(newVertex.getUi());
+            } else if (t.getButton() == MouseButton.PRIMARY && state == ApplicationState.IDLE) {
+                // Clear selection
+                System.out.println("Clear selection");
+            } else if (t.getButton() == MouseButton.SECONDARY && state == ApplicationState.NEW_VERTEX) {
+                // Remove new vertex
+                root.getChildren().remove(newVertex.getUi());
+                Vertex.decrement();
+                newVertex = null;
 
-        root.getChildren().addAll(rootVertex.getUi(), v2.getUi(), v3.getUi());
+                state = ApplicationState.IDLE;
+            }
+        });
+        root.getChildren().add(pane);
 
-        Edge v1v2 = new Edge(rootVertex, v2);
-        Edge v1v3 = new Edge(rootVertex, v3);
-        Edge v3v2 = new Edge(v3, v2);
-
-        root.getChildren().add(v1v2.getUi());
-        root.getChildren().add(v1v3.getUi());
-        root.getChildren().add(v3v2.getUi());
-
-        rootVertex.getUi().toFront();
-        v2.getUi().toFront();
-        v3.getUi().toFront();
+        rootVertex = new Vertex(
+                UNITS_WIDTH / 2.0 - Vertex.CIRCLE_RADIUS,
+                UNITS_HEIGHT / 2.0 - Vertex.CIRCLE_RADIUS
+        );
+        root.getChildren().add(rootVertex.getUi());
 
         stage.setScene(scene);
+        stage.setTitle("Graph Tool v0.1");
         stage.show();
+    }
+
+    public static ApplicationState getState() {
+        return state;
+    }
+
+    public static Vertex getNewVertex() {
+        return newVertex;
+    }
+
+    public static void connectNewVertex(Vertex vertex) {
+        Edge edge = new Edge(vertex, newVertex);
+        root.getChildren().add(edge.getUi());
+        state = ApplicationState.IDLE;
+        vertex.getUi().toFront();
+        newVertex.getUi().toFront();
+        newVertex.setDashed(false);
+        newVertex.setSelected(false);
     }
 
     public static void main(String[] args) {
