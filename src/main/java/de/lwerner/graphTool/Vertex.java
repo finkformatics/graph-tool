@@ -1,7 +1,8 @@
 package de.lwerner.graphTool;
 
 import javafx.scene.Cursor;
-import javafx.scene.layout.*;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
@@ -11,32 +12,30 @@ import static de.lwerner.graphTool.GraphTool.unitSize;
 
 public class Vertex {
 
+    public static final double CIRCLE_RADIUS = 1.5;
+
     private static int vertexCount;
 
-    private final StackPane components;
+    // UI
+    private final StackPane ui;
     private final Circle circle;
     private final Text text;
 
-    private int unitsX;
-    private int unitsY;
-
+    // Event helpers
     private double orgSceneX;
     private double orgSceneY;
 
     public Vertex(int unitsX, int unitsY) {
-        this.unitsX = unitsX;
-        this.unitsY = unitsY;
-
-        this.circle = new Circle(1.5 * unitSize, Color.DARKSLATEBLUE);
+        this.circle = new Circle(CIRCLE_RADIUS * unitSize, Color.DARKSLATEBLUE);
         this.text = new Text("" + ++vertexCount);
-        this.components = new StackPane();
+        this.ui = new StackPane();
 
-        buildComponents();
+        buildUi(unitsX, unitsY);
     }
 
-    private void buildComponents() {
-        components.setLayoutX(unitsX * unitSize);
-        components.setLayoutY(unitsY * unitSize);
+    private void buildUi(int unitsX, int unitsY) {
+        ui.setLayoutX(unitsX * unitSize);
+        ui.setLayoutY(unitsY * unitSize);
 
         circle.setStroke(Color.WHITE);
         circle.setStrokeWidth(1);
@@ -47,55 +46,35 @@ public class Vertex {
         circle.setCursor(Cursor.HAND);
         text.setCursor(Cursor.HAND);
 
-        circle.setOnMousePressed((t) -> {
-            orgSceneX = t.getSceneX();
-            orgSceneY = t.getSceneY();
-        });
+        text.setOnMousePressed(this::mousePressed);
+        text.setOnMouseDragged(this::mouseDragged);
+        circle.setOnMousePressed(this::mousePressed);
+        circle.setOnMouseDragged(this::mouseDragged);
 
-        text.setOnMousePressed((t) -> {
-            orgSceneX = t.getSceneX();
-            orgSceneY = t.getSceneY();
-
-            components.toFront();
-        });
-
-        circle.setOnMouseDragged((t) -> {
-            double offsetX = t.getSceneX() - orgSceneX;
-            double offsetY = t.getSceneY() - orgSceneY;
-
-            components.relocate(components.getLayoutX() + offsetX, components.getLayoutY() + offsetY);
-
-            orgSceneX = t.getSceneX();
-            orgSceneY = t.getSceneY();
-
-            components.toFront();
-        });
-
-        text.setOnMouseDragged((t) -> {
-            double offsetX = t.getSceneX() - orgSceneX;
-            double offsetY = t.getSceneY() - orgSceneY;
-
-            components.relocate(components.getLayoutX() + offsetX, components.getLayoutY() + offsetY);
-
-            orgSceneX = t.getSceneX();
-            orgSceneY = t.getSceneY();
-
-            components.toFront();
-        });
-
-        components.getChildren().addAll(circle, text);
+        ui.getChildren().addAll(circle, text);
     }
 
-    public Circle getCircle() {
-        return circle;
+    public StackPane getUi() {
+        return ui;
     }
 
-    public Text getText() {
-        return text;
+    private void mousePressed(MouseEvent event) {
+        orgSceneX = event.getSceneX();
+        orgSceneY = event.getSceneY();
+
+        ui.toFront();
     }
 
-    public StackPane getComponents() {
-        return components;
+    private void mouseDragged(MouseEvent event) {
+        double offsetX = event.getSceneX() - orgSceneX;
+        double offsetY = event.getSceneY() - orgSceneY;
+
+        ui.relocate(ui.getLayoutX() + offsetX, ui.getLayoutY() + offsetY);
+
+        orgSceneX = event.getSceneX();
+        orgSceneY = event.getSceneY();
+
+        ui.toFront();
     }
 
 }

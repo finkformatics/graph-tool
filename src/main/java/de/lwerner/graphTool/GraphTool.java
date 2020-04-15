@@ -5,15 +5,13 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Line;
-import javafx.scene.shape.StrokeLineCap;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 public class GraphTool extends Application {
 
-    private static final int DEFAULT_EDGE_WEIGHT = 1;
+    private static final int UNITS_WIDTH = 50;
+    private static final int UNITS_HEIGHT = 30;
 
     protected static double unitSize;
 
@@ -28,50 +26,28 @@ public class GraphTool extends Application {
         }
     }
 
-    private Vertex createVertex(int unitsX, int unitsY) {
-        return new Vertex(unitsX, unitsY);
-    }
-
-    private Line connect(Vertex v1, Vertex v2) {
-        Line line = new Line();
-
-        line.startXProperty().bind(v1.getComponents().layoutXProperty().add(1.5 * unitSize));
-        line.startYProperty().bind(v1.getComponents().layoutYProperty().add(1.5 * unitSize));
-
-        line.endXProperty().bind(v2.getComponents().layoutXProperty().add(1.5 * unitSize));
-        line.endYProperty().bind(v2.getComponents().layoutYProperty().add(1.5 * unitSize));
-
-        line.setStroke(Color.WHITE);
-        line.setStrokeWidth(1);
-        line.setStrokeLineCap(StrokeLineCap.BUTT);
-
-        return line;
-    }
-
     @Override
     public void start(Stage stage) {
         Group root = new Group();
-        Scene scene = new Scene(root, 50 * unitSize, 30 * unitSize, Color.DARKSLATEBLUE);
+        Scene scene = new Scene(root, UNITS_WIDTH * unitSize, UNITS_HEIGHT * unitSize, Color.DARKSLATEBLUE);
 
-        // circles
-        Vertex redCircle = createVertex(10, 5);
-        Vertex blueCircle = createVertex(40, 10);
-        Vertex greenCircle = createVertex(25, 20);
+        Vertex v1 = new Vertex(10, 5);
+        Vertex v2 = new Vertex(40, 10);
+        Vertex v3 = new Vertex(25, 20);
 
-        Line line1 = connect(redCircle, blueCircle);
-        Line line2 = connect(redCircle, greenCircle);
-        Line line3 = connect(greenCircle, blueCircle);
+        root.getChildren().addAll(v1.getUi(), v2.getUi(), v3.getUi());
 
-        root.getChildren().addAll(redCircle.getComponents(), blueCircle.getComponents(), greenCircle.getComponents());
+        Edge v1v2 = new Edge(v1, v2);
+        Edge v1v3 = new Edge(v1, v3);
+        Edge v3v2 = new Edge(v3, v2);
 
-        // add the lines
-        root.getChildren().add(line1);
-        root.getChildren().add(line2);
-        root.getChildren().add(line3);
+        root.getChildren().add(v1v2.getUi());
+        root.getChildren().add(v1v3.getUi());
+        root.getChildren().add(v3v2.getUi());
 
-        redCircle.getComponents().toFront();
-        blueCircle.getComponents().toFront();
-        greenCircle.getComponents().toFront();
+        v1.getUi().toFront();
+        v2.getUi().toFront();
+        v3.getUi().toFront();
 
         stage.setScene(scene);
         stage.show();
