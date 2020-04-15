@@ -63,4 +63,21 @@ public class Edge {
         this.weight = weight;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Edge edge = (Edge) o;
+
+        if (!v1.equals(edge.v1)) return false;
+        return v2.equals(edge.v2);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = v1.hashCode();
+        result = 31 * result + v2.hashCode();
+        return result;
+    }
 }

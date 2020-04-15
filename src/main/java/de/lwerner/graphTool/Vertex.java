@@ -1,6 +1,7 @@
 package de.lwerner.graphTool;
 
 import javafx.scene.Cursor;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -95,34 +96,105 @@ public class Vertex {
         }
     }
 
-    private void mouseEntered(MouseEvent event) {
-        if (GraphTool.getState() == GraphTool.ApplicationState.NEW_VERTEX && GraphTool.getNewVertex() != this) {
-            setSelected(true);
+    private void recursivelyGetConnectedVertices(Set<Vertex> vertices, Set<Edge> visitedEdges, Vertex currentVertex) {
+        for (Edge e: currentVertex.edges) {
+            if (visitedEdges.contains(e)) {
+                continue;
+            }
+
+            visitedEdges.add(e);
+
+            vertices.add(e.getV1());
+            vertices.add(e.getV2());
+
+            recursivelyGetConnectedVertices(vertices, visitedEdges, e.getV1());
+            recursivelyGetConnectedVertices(vertices, visitedEdges, e.getV2());
         }
+    }
+
+    public Set<Vertex> getAllConnectedVertices() {
+        Set<Vertex> connectedVertices = new HashSet<>();
+        Set<Edge> visitedEdges = new HashSet<>();
+
+        recursivelyGetConnectedVertices(connectedVertices, visitedEdges, this);
+
+        if (connectedVertices.isEmpty()) {
+            connectedVertices.add(this);
+        }
+
+        return connectedVertices;
+    }
+
+    private void mouseEntered(MouseEvent event) {
+        if (!shouldRecogniseMouseEnterExit()) {
+            return;
+        }
+
+        setSelected(true);
+        GraphTool.getSelectionLine().setEndX(ui.getLayoutX() + CIRCLE_RADIUS * unitSize);
+        GraphTool.getSelectionLine().setEndY(ui.getLayoutY() + CIRCLE_RADIUS * unitSize);
     }
 
     private void mouseExited(MouseEvent event) {
-        if (GraphTool.getState() == GraphTool.ApplicationState.NEW_VERTEX && GraphTool.getNewVertex() != this) {
-            setSelected(false);
+        if (!shouldRecogniseMouseEnterExit()) {
+            return;
         }
+
+        setSelected(false);
+    }
+
+    private boolean shouldRecogniseMouseEnterExit() {
+        if (GraphTool.getState() == GraphTool.ApplicationState.IDLE) {
+            return false;
+        }
+
+        if (GraphTool.getState() == GraphTool.ApplicationState.NEW_VERTEX && GraphTool.getNewVertex() == this) {
+            return false;
+        }
+
+        if (GraphTool.getState() == GraphTool.ApplicationState.CONNECT_VERTICES && GraphTool.getStartVertex() == this) {
+            return false;
+        }
+
+        if (GraphTool.getState() == GraphTool.ApplicationState.CONNECT_VERTICES) {
+            for (Edge e: edges) {
+                if (e.getV1() == this && e.getV2() == GraphTool.getStartVertex()) {
+                    return false;
+                } else if (e.getV2() == this && e.getV1() == GraphTool.getStartVertex()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private void mousePressed(MouseEvent event) {
-        // TODO: Connect two vertices
-        if (GraphTool.getState() == GraphTool.ApplicationState.IDLE) {
+        if (event.getButton() == MouseButton.PRIMARY && GraphTool.getState() == GraphTool.ApplicationState.IDLE) {
             orgSceneX = event.getSceneX();
             orgSceneY = event.getSceneY();
             orgLayoutX = ui.getLayoutX();
             orgLayoutY = ui.getLayoutY();
 
             ui.toFront();
-        } else if (GraphTool.getState() == GraphTool.ApplicationState.NEW_VERTEX && GraphTool.getNewVertex() != this) {
+        } else if (event.getButton() == MouseButton.PRIMARY && GraphTool.getState() == GraphTool.ApplicationState.NEW_VERTEX && GraphTool.getNewVertex() != this) {
             GraphTool.connectNewVertex(this);
+            setSelected(false);
+        } else if (event.getButton() == MouseButton.SECONDARY && GraphTool.getState() == GraphTool.ApplicationState.IDLE) {
+            GraphTool.startConnection(this, event);
+            setSelected(true);
+        } else if (event.getButton() == MouseButton.PRIMARY && GraphTool.getState() == GraphTool.ApplicationState.CONNECT_VERTICES && shouldRecogniseMouseEnterExit()) {
+            GraphTool.endConnection(this);
             setSelected(false);
         }
     }
 
     private void mouseDragged(MouseEvent event) {
+        // TODO: On new vertices or new edges connecting sometimes we move the vertices. Don't do that!
+        if (GraphTool.getState() != GraphTool.ApplicationState.IDLE) {
+            return;
+        }
+
         double offsetX = event.getSceneX() - orgSceneX;
         double offsetY = event.getSceneY() - orgSceneY;
 

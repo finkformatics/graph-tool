@@ -5,11 +5,15 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.StrokeLineCap;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+
+import static de.lwerner.graphTool.Vertex.CIRCLE_RADIUS;
 
 public class GraphTool extends Application {
 
@@ -18,14 +22,18 @@ public class GraphTool extends Application {
 
     protected static enum ApplicationState {
         IDLE,
-        NEW_VERTEX
+        NEW_VERTEX,
+        CONNECT_VERTICES,
     }
 
     protected static double unitSize;
 
     private static ApplicationState state = ApplicationState.IDLE;
+    private static Vertex startVertex;
     private static Vertex newVertex;
+    private static Line selectionLine;
     private static Group root;
+    private static GraphTool instance;
     private Vertex rootVertex;
 
     public GraphTool() {
@@ -37,6 +45,8 @@ public class GraphTool extends Application {
         } else {
             unitSize = 15;
         }
+
+        instance = this;
     }
 
     private void drawGrid() {
@@ -75,7 +85,6 @@ public class GraphTool extends Application {
         pane.setOnMousePressed((t) -> {
             if (t.getButton() == MouseButton.SECONDARY && state == ApplicationState.IDLE) {
                 // New vertex
-                // TODO: Dashed line while creating new vertex
                 state = ApplicationState.NEW_VERTEX;
                 newVertex = new Vertex(
                         t.getSceneX() / unitSize - Vertex.CIRCLE_RADIUS,
@@ -84,6 +93,8 @@ public class GraphTool extends Application {
                 newVertex.setDashed(true);
                 newVertex.setSelected(true);
                 root.getChildren().add(newVertex.getUi());
+                createSelectionLine(newVertex, t);
+                newVertex.getUi().toFront();
             } else if (t.getButton() == MouseButton.PRIMARY && state == ApplicationState.IDLE) {
                 // Clear selection
                 System.out.println("Clear selection");
@@ -93,7 +104,23 @@ public class GraphTool extends Application {
                 Vertex.decrement();
                 newVertex = null;
 
+                removeSelectionLine();
+
                 state = ApplicationState.IDLE;
+            } else if (t.getButton() == MouseButton.SECONDARY && state == ApplicationState.CONNECT_VERTICES) {
+                removeSelectionLine();
+                state = ApplicationState.IDLE;
+                startVertex.setSelected(false);
+            }
+        });
+        pane.setOnMouseMoved((t) -> {
+            if (state == ApplicationState.NEW_VERTEX || state == ApplicationState.CONNECT_VERTICES) {
+                selectionLine.setEndX(t.getSceneX() + 1);
+                selectionLine.setEndY(t.getSceneY() + 1);
+                newVertex.getUi().toFront();
+                for (Vertex v: rootVertex.getAllConnectedVertices()) {
+                    v.getUi().toFront();
+                }
             }
         });
         root.getChildren().add(pane);
@@ -109,12 +136,51 @@ public class GraphTool extends Application {
         stage.show();
     }
 
+    private static void createSelectionLine(Vertex startVertex, MouseEvent event) {
+        selectionLine = new Line();
+        selectionLine.setStroke(Color.LIGHTCORAL);
+        selectionLine.setStrokeWidth(1);
+        selectionLine.setStrokeLineCap(StrokeLineCap.BUTT);
+        selectionLine.getStrokeDashArray().addAll(3d);
+        selectionLine.startXProperty().bind(startVertex.getUi().layoutXProperty().add(CIRCLE_RADIUS * unitSize));
+        selectionLine.startYProperty().bind(startVertex.getUi().layoutYProperty().add(CIRCLE_RADIUS * unitSize));
+        selectionLine.setEndX(event.getSceneX());
+        selectionLine.setEndY(event.getSceneY());
+        root.getChildren().add(selectionLine);
+    }
+
     public static ApplicationState getState() {
         return state;
     }
 
+    public static void startConnection(Vertex vertex, MouseEvent event) {
+        state = GraphTool.ApplicationState.CONNECT_VERTICES;
+        startVertex = vertex;
+        createSelectionLine(vertex, event);
+    }
+
+    public static void endConnection(Vertex endVertex) {
+        Edge edge = new Edge(startVertex, endVertex);
+        root.getChildren().add(edge.getUi());
+        state = ApplicationState.IDLE;
+        removeSelectionLine();
+        startVertex.setSelected(false);
+        endVertex.setSelected(false);
+        startVertex.getUi().toFront();
+        endVertex.getUi().toFront();
+        startVertex = null;
+    }
+
     public static Vertex getNewVertex() {
         return newVertex;
+    }
+
+    public static Vertex getStartVertex() {
+        return startVertex;
+    }
+
+    public static Line getSelectionLine() {
+        return selectionLine;
     }
 
     public static void connectNewVertex(Vertex vertex) {
@@ -125,6 +191,14 @@ public class GraphTool extends Application {
         newVertex.getUi().toFront();
         newVertex.setDashed(false);
         newVertex.setSelected(false);
+        removeSelectionLine();
+    }
+
+    private static void removeSelectionLine() {
+        root.getChildren().remove(selectionLine);
+        selectionLine.startXProperty().unbind();
+        selectionLine.endXProperty().unbind();
+        selectionLine = null;
     }
 
     public static void main(String[] args) {
