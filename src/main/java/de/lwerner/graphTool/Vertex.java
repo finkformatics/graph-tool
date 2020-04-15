@@ -8,6 +8,9 @@ import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import static de.lwerner.graphTool.GraphTool.unitSize;
 
 public class Vertex {
@@ -24,11 +27,18 @@ public class Vertex {
     // Event helpers
     private double orgSceneX;
     private double orgSceneY;
+    private double orgLayoutX;
+    private double orgLayoutY;
+
+    // Vertex properties
+    private final Set<Edge> edges;
 
     public Vertex(int unitsX, int unitsY) {
         this.circle = new Circle(CIRCLE_RADIUS * unitSize, Color.DARKSLATEBLUE);
         this.text = new Text("" + ++vertexCount);
         this.ui = new StackPane();
+
+        edges = new HashSet<>();
 
         buildUi(unitsX, unitsY);
     }
@@ -58,9 +68,15 @@ public class Vertex {
         return ui;
     }
 
+    public void addEdge(Edge edge) {
+        edges.add(edge);
+    }
+
     private void mousePressed(MouseEvent event) {
         orgSceneX = event.getSceneX();
         orgSceneY = event.getSceneY();
+        orgLayoutX = ui.getLayoutX();
+        orgLayoutY = ui.getLayoutY();
 
         ui.toFront();
     }
@@ -69,10 +85,17 @@ public class Vertex {
         double offsetX = event.getSceneX() - orgSceneX;
         double offsetY = event.getSceneY() - orgSceneY;
 
-        ui.relocate(ui.getLayoutX() + offsetX, ui.getLayoutY() + offsetY);
+        double newX = orgLayoutX + offsetX;
+        double newY = orgLayoutY + offsetY;
 
-        orgSceneX = event.getSceneX();
-        orgSceneY = event.getSceneY();
+        if (event.isShiftDown()) {
+            double newXUnits = Math.round(newX / unitSize);
+            double newYUnits = Math.round(newY / unitSize);
+            newX = newXUnits * unitSize;
+            newY = newYUnits * unitSize;
+        }
+
+        ui.relocate(newX, newY);
 
         ui.toFront();
     }

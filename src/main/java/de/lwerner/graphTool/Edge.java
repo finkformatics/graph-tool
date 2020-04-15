@@ -23,6 +23,9 @@ public class Edge {
         this.v1 = v1;
         this.v2 = v2;
 
+        this.v1.addEdge(this);
+        this.v2.addEdge(this);
+
         ui = new Line();
 
         buildUi();
